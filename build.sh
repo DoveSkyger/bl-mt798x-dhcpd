@@ -82,11 +82,12 @@ export CROSS_COMPILE="$TOOLCHAIN"
 # Config Dir
 CONFIGS_DIR_DEFAULT="configs"
 CONFIGS_DIR_FIT="configs-fit"
+CONFIGS_DIR_OPENWRT="configs-openwrt"
 CONFIGS_DIR_NONMBM="configs-nonmbm"
 
 detect_soc() {
 	matched=""
-	for dir in "$UBOOT_DIR/$CONFIGS_DIR_DEFAULT" "$UBOOT_DIR/$CONFIGS_DIR_FIT" "$UBOOT_DIR/$CONFIGS_DIR_NONMBM"; do
+	for dir in "$UBOOT_DIR/$CONFIGS_DIR_DEFAULT" "$UBOOT_DIR/$CONFIGS_DIR_FIT" "$UBOOT_DIR/$CONFIGS_DIR_NONMBM" "$UBOOT_DIR/$CONFIGS_DIR_OPENWRT"; do
 		[ -d "$dir" ] || continue
 		for file in "$dir"/*_"$BOARD"_defconfig "$dir"/*_"$BOARD"_multi_layout_defconfig; do
 			[ -f "$file" ] || continue
@@ -149,12 +150,14 @@ UBOOT_CFG_MULTILAYOUT="${UBOOT_CFG_MULTILAYOUT:-$UBOOT_CFG_MULTILAYOUT_SOURCE}"
 # ATF Config Path
 ATF_CFG_PATH_DEFAULT="$ATF_DIR/$CONFIGS_DIR_DEFAULT/$ATF_CFG"
 ATF_CFG_PATH_FIT="$ATF_DIR/$CONFIGS_DIR_FIT/$ATF_CFG"
+ATF_CFG_PATH_OPENWRT="$ATF_DIR/$CONFIGS_DIR_OPENWRT/$ATF_CFG"
 ATF_CFG_PATH_NONMBM="$ATF_DIR/$CONFIGS_DIR_NONMBM/$ATF_CFG"
 
 # U-Boot Config Path
 UBOOT_CFG_PATH_DEFAULT="$UBOOT_DIR/$CONFIGS_DIR_DEFAULT/$UBOOT_CFG"
 UBOOT_CFG_PATH_MULTILAYOUT="$UBOOT_DIR/$CONFIGS_DIR_DEFAULT/$UBOOT_CFG_MULTILAYOUT"
 UBOOT_CFG_PATH_FIT="$UBOOT_DIR/$CONFIGS_DIR_FIT/$UBOOT_CFG"
+UBOOT_CFG_PATH_OPENWRT="$UBOOT_DIR/$CONFIGS_DIR_OPENWRT/$UBOOT_CFG"
 UBOOT_CFG_PATH_NONMBM="$UBOOT_DIR/$CONFIGS_DIR_NONMBM/$UBOOT_CFG"
 UBOOT_CFG_PATH_NONMBM_MULTILAYOUT="$UBOOT_DIR/$CONFIGS_DIR_NONMBM/$UBOOT_CFG_MULTILAYOUT"
 
@@ -182,6 +185,21 @@ elif [ "$VARIANT" = "ubootmod" ] || [ "$VARIANT" = "UBOOTMOD" ]; then
 	UBOOT_CFG_PATH=$UBOOT_CFG_PATH_FIT
 	if [ "$multilayout" = "1" ]; then
 		echo "Warning: No multi layout with ubootmod variant, will disabled it.(Y/n):"
+		if [ "$SILENT" != "Y" ]; then
+			read answer
+		fi
+		if [ "$answer" = "y" ] || [ "$answer" = "Y" ] || [ "$SILENT" = "Y" ]; then
+			multilayout=0
+		else
+			echo "Canceled."
+		fi
+	fi
+elif [ "$VARIANT" = "openwrt" ] || [ "$VARIANT" = "OPENWRT" ]; then
+	fixedparts=0
+	ATF_CFG_PATH=$ATF_CFG_PATH_DEFAULT
+	UBOOT_CFG_PATH=$UBOOT_CFG_PATH_OPENWRT
+	if [ "$multilayout" = "1" ]; then
+		echo "Warning: No multi layout with openwrt variant, will disabled it.(Y/n):"
 		if [ "$SILENT" != "Y" ]; then
 			read answer
 		fi
@@ -325,6 +343,9 @@ if [ -f "$ATF_DIR/build/${SOC}/release/fip.bin" ]; then
 	if [ "$VARIANT" = "ubootmod" ] || [ "$VARIANT" = "UBOOTMOD" ]; then
 		FIP_NAME="${FIP_NAME}-fit"
 	fi
+	if [ "$VARIANT" = "openwrt" ] || [ "$VARIANT" = "OPENWRT" ]; then
+		FIP_NAME="${FIP_NAME}-openwrt"
+	fi
 	if [ "$VARIANT" = "nonmbm" ] || [ "$VARIANT" = "NONMBM" ]; then
 		FIP_NAME="${FIP_NAME}-nonmbm"
 	fi
@@ -338,7 +359,7 @@ if [ -f "$ATF_DIR/build/${SOC}/release/fip.bin" ]; then
 	FIP_NAME="${FIP_NAME}_md5-${FIP_MD5}"
 	echo "fip.bin md5sum: $FIP_MD5"
 	cp -f "$ATF_DIR/build/${SOC}/release/fip.bin" "output/${FIP_NAME}.bin"
-	echo "fip-${SOC}_${BOARD}_${VERSION} build done"
+	echo "fip-${SOC}_${BOARD}_${VERSION}_${VARIANT} build done"
 	echo "Output: output/${FIP_NAME}.bin"
 else
 	echo "fip build fail!"
@@ -350,6 +371,9 @@ if grep -Eq "(^_|CONFIG_TARGET_ALL_NO_SEC_BOOT=y)" "$ATF_CFG_PATH"; then
 		if [ "$VARIANT" = "ubootmod" ] || [ "$VARIANT" = "UBOOTMOD" ]; then
 			BL2_NAME="${BL2_NAME}-fit"
 		fi
+		if [ "$VARIANT" = "openwrt" ] || [ "$VARIANT" = "OPENWRT" ]; then
+			BL2_NAME="${BL2_NAME}-openwrt"
+		fi
 		if [ "$VARIANT" = "nonmbm" ] || [ "$VARIANT" = "NONMBM" ]; then
 			BL2_NAME="${BL2_NAME}-nonmbm"
 		fi
@@ -357,7 +381,7 @@ if grep -Eq "(^_|CONFIG_TARGET_ALL_NO_SEC_BOOT=y)" "$ATF_CFG_PATH"; then
 		BL2_NAME="${BL2_NAME}_md5-${BL2_MD5}"
 		echo "bl2.img md5sum: $BL2_MD5"
 		cp -f "$ATF_DIR/build/${SOC}/release/bl2.img" "output/${BL2_NAME}.img"
-		echo "bl2-${SOC}_${BOARD}_${VERSION} build done"
+		echo "bl2-${SOC}_${BOARD}_${VERSION}_${VARIANT} build done"
 		echo "Output: output/${BL2_NAME}.img"
 	else
 		echo "bl2 build fail!"
