@@ -17,7 +17,7 @@
 #include <glbtn.h>
 #endif
 #include "upgrade_helper.h"
-#include "colored_print.h"
+#include <failsafe/cprint.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
